@@ -9,7 +9,8 @@ services:
       - tc
     environment:
       ROLE: CONSUMER
-      CONNECTION_STRING: amqp://guest:guest@rabbitmq:5672
+      RABBIT_CONNECTION_STRING: amqp://guest:guest@rabbitmq:5672
+      DB_CONNECTION_STRING: mysql://user:password@mysql:3306/db
     labels:
       com.docker-tc.enabled: 0
       com.docker-tc.delay: "2ms"
@@ -22,7 +23,9 @@ services:
       - ib-consumer
     environment:
       ROLE: PRODUCER
-      CONNECTION_STRING: amqp://guest:guest@rabbitmq:5672
+      RABBIT_CONNECTION_STRING: amqp://guest:guest@rabbitmq:5672
+      DB_CONNECTION_STRING: mysql://user:password@mysql:3306/db
+      MESSAGES_PER_SECOND: 10
     networks:
       - ib-net
   rabbitmq:
