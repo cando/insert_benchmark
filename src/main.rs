@@ -1,14 +1,15 @@
-use std::time::Duration;
+pub mod event;
 
 use amiquip::{
     Connection, ConsumerMessage, ConsumerOptions, ExchangeDeclareOptions, ExchangeType, FieldTable,
     Publish, QueueDeclareOptions,
 };
+use event::Event;
 use mysql::prelude::*;
 use mysql::*;
+use std::time::Duration;
 use uuid::Uuid;
 fn main() -> std::result::Result<(), String> {
-    std::thread::sleep(Duration::from_secs(5));
     let role = std::env::var("ROLE").expect("ROLE not set");
     let rabbit_connection_string =
         std::env::var("RABBIT_CONNECTION_STRING").expect("YOU MUST SET RABBIT CONNECTION_STRING");
@@ -37,11 +38,11 @@ fn produce(
         .parse::<u64>()
         .expect("MESSAGES_PER_SECOND must be a valid unsigned integer");
     let msg_rate = 1000000 / msg_per_second; //us between each message
-    
+
     db_conn
         .query_drop(r"DROP TABLE IF EXISTS `event`;")
         .map_err(format_db_error)?;
-    
+
     db_conn
         .query_drop(
             r"
@@ -92,6 +93,61 @@ fn consume(
     db_conn: &mut PooledConn,
     rabbit_conn: &mut Connection,
 ) -> std::result::Result<(), String> {
+    let channel = rabbit_conn.open_channel(None).map_err(format_amqp_error)?;
+    let prefetch_benchmark_queue = channel
+        .queue_declare(
+            "insert-queue", //get_random_string(8),
+            QueueDeclareOptions {
+                durable: false,
+                exclusive: false,
+                auto_delete: false,
+                arguments: FieldTable::default(),
+            },
+        )
+        .map_err(format_amqp_error)?;
+
+    channel
+        .queue_bind(
+            prefetch_benchmark_queue.name(),
+            "insert-benchmark-exchange",
+            "ignored",
+            FieldTable::default(),
+        )
+        .map_err(format_amqp_error)?;
+
+    let consumer = prefetch_benchmark_queue
+        .consume(ConsumerOptions::default())
+        .map_err(format_amqp_error)?;
+
+    let ts = std::time::Instant::now();
+    for (i, message) in consumer.receiver().iter().enumerate() {
+        match message {
+            ConsumerMessage::Delivery(delivery) => {
+                let body = String::from_utf8_lossy(&delivery.body);
+                match body.as_ref() {
+                    _ => {
+                        let mut event: Event =
+                            serde_json::from_str(&body.to_string()).map_err(|e| format!("{e}"))?;
+                        event.payload = body.to_string();
+                        let before = ts.elapsed();
+                        db_conn
+                            .query_drop(event.get_insert_query())
+                            .map_err(|e| format!("{e}"))?;
+                        let after = ts.elapsed();
+                        let write_time = (after - before).as_micros();
+                        println!("{i},{write_time}")
+                    }
+                }
+
+                consumer.ack(delivery).map_err(format_amqp_error)?;
+            }
+
+            other => {
+                println!("Consumer ended: {:?}", other);
+                break;
+            }
+        }
+    }
     Ok(())
 }
 
