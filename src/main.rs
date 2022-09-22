@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use amiquip::{
     Connection, ConsumerMessage, ConsumerOptions, ExchangeDeclareOptions, ExchangeType, FieldTable,
     Publish, QueueDeclareOptions,
@@ -6,6 +8,7 @@ use mysql::prelude::*;
 use mysql::*;
 use uuid::Uuid;
 fn main() -> std::result::Result<(), String> {
+    std::thread::sleep(Duration::from_secs(5));
     let role = std::env::var("ROLE").expect("ROLE not set");
     let rabbit_connection_string =
         std::env::var("RABBIT_CONNECTION_STRING").expect("YOU MUST SET RABBIT CONNECTION_STRING");
@@ -34,6 +37,11 @@ fn produce(
         .parse::<u64>()
         .expect("MESSAGES_PER_SECOND must be a valid unsigned integer");
     let msg_rate = 1000000 / msg_per_second; //us between each message
+    
+    db_conn
+        .query_drop(r"DROP TABLE IF EXISTS `event`;")
+        .map_err(format_db_error)?;
+    
     db_conn
         .query_drop(
             r"
@@ -76,7 +84,7 @@ fn produce(
         exchange
             .publish(Publish::new(message_to_publish.as_bytes(), "insert-test"))
             .map_err(format_amqp_error)?;
-        std::thread::sleep(std::time::Duration::from_micros(msg_rate));
+        std::thread::sleep(Duration::from_micros(msg_rate));
     }
 }
 
