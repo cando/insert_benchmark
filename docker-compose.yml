@@ -1,0 +1,66 @@
+version: "3.8"
+services:
+  ib-consumer:
+    deploy:
+      replicas: 1
+    build: .
+    depends_on:
+      - rabbitmq
+      - tc
+    environment:
+      ROLE: CONSUMER
+      CONNECTION_STRING: amqp://guest:guest@rabbitmq:5672
+    labels:
+      com.docker-tc.enabled: 0
+      com.docker-tc.delay: "2ms"
+    networks:
+      - ib-net
+  ib-producer:
+    build: .
+    depends_on:
+      - rabbitmq
+      - ib-consumer
+    environment:
+      ROLE: PRODUCER
+      CONNECTION_STRING: amqp://guest:guest@rabbitmq:5672
+    networks:
+      - ib-net
+  rabbitmq:
+    image: rabbitmq:3.10-management-alpine
+    container_name: 'ib-rabbitmq'
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - ib-net
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'db'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'password'
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    networks:
+      - ib-net
+  tc:
+    image: "lukaszlach/docker-tc"
+    container_name: docker-tc
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/docker-tc:/var/docker-tc
+    deploy:
+      mode: global
+    environment:
+      HTTP_BIND: 127.0.0.1
+      HTTP_PORT: 4080
+    network_mode: host
+networks:
+  ib-net:
+    driver: bridge

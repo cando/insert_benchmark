@@ -1,0 +1,58 @@
+{
+    "type": "insurance_issued",
+    "aggregate_name": "insurance",
+    "aggregate_id": "REPLACE_ME",
+    "occurred_on": "2016-11-22T14:57:48+0100",
+    "save_code": "PR1234567",
+    "quote_uuid": "abc",
+    "insurance_code": "PRP1234567",
+    "issuing_company_code": "PRP1234567",
+    "effective_date": "2016-11-22T14:57:48+0100",
+    "expiration_date": "2017-11-22T14:57:48+0100",
+    "source": "prima",
+    "save_source": "prima",
+    "coverages": [
+        {
+            "id": "3d9e3e72-123f-46ae-98bc-c84cd9695bda",
+            "date_from": "2016-11-22T14:57:48+0100",
+            "date_to": "2017-11-22T14:57:48+0100",
+            "price": 100,
+            "paid": true,
+            "guarantees": [
+                {
+                    "slug": "rca",
+                    "limit": "limit_rca_6_07",
+                    "deductible": "nodeductibles",
+                    "price": {
+                        "net": 100,
+                        "ssn": 100,
+                        "tax": 100,
+                        "gross": 100
+                    }
+                }
+            ],
+            "progressive_instalment": 1
+        }
+    ],
+    "risk_type": "new_business",
+    "is_substitution": false,
+    "issuing_company": "great_lakes",
+    "vehicle_type": "car",
+    "plate_number": "CN333DR",
+    "payment_frequency": "yearly",
+    "contractor": {
+        "name": "aaa",
+        "residence_province": "BB",
+        "residence_address": "ccc",
+        "residence_city": "ddd",
+        "fiscal_code_vat": "eee"
+    },
+    "owner": {
+        "name": "fff",
+        "residence_province": "GG",
+        "residence_address": "hhh",
+        "residence_city": "iii",
+        "residence_zip": "24047",
+        "fiscal_code_vat": "jjj"
+    }
+}
